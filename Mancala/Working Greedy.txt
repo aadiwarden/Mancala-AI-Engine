@@ -1,0 +1,569 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.io.FileOutputStream;
+import java.util.Scanner;
+
+class theGame
+{
+	ArrayList<Integer> theState;
+			
+	public theGame()
+	{
+		theState = new ArrayList<Integer>();
+	}
+}
+
+public class mancala 
+{
+	private int ourPlayer;
+	private int theCut;
+	private int eachCount;
+	private int modVal;
+	private int maxPos;
+	private int curDep;
+	private int curVal;
+	private ArrayList<String> traLog;
+	//private int maxEvalPos;
+	private theGame finalGreed = new theGame();
+	
+	public void display(theGame temp)
+	{
+		for(int i = 0; i <(eachCount*2 + 2); i++)
+		{
+			System.out.print(temp.theState.get(i));
+		}
+		System.out.println("");
+	}
+	
+	public int comparePos(int a, int b)
+	{
+		int ans = 0;
+		
+		if(ourPlayer == 1)
+		{
+			if(a <= b)
+			{
+				ans = 1;
+			}
+			else
+			{
+				ans = 2;
+			}
+		}
+		else if(ourPlayer == 2)
+		{
+			if(a >= b)
+			{
+				ans = 1;
+			}
+			else
+			{
+				ans =  2;
+			}
+		}
+		return ans;
+	}
+	
+	public int evalState(theGame temp)
+	{
+		int ans = 0;
+		
+		if(ourPlayer == 1)
+		{
+			ans = temp.theState.get(eachCount) - temp.theState.get((eachCount*2) + 1);
+		}
+		else
+		{
+			ans = temp.theState.get((eachCount*2) + 1) - temp.theState.get(eachCount);
+		}
+		
+		return ans;
+			
+	}
+	
+	public int endGame(theGame temp, int turn)
+	{
+		int i, ans = 0;
+		for(i=turn; i < (turn + eachCount); i++)
+		{
+			if(temp.theState.get(i) != 0)
+			{
+				break;
+			}
+		}
+		if(i == turn+eachCount)
+		{
+			ans = 1;
+		}
+		else
+		{
+			ans = 0;
+		}
+		
+		return ans;
+	}
+	
+	public void addToTraLog(int pos)
+	{
+		traLog.add(posToString(pos));
+		traLog.add(Integer.toString(curDep));
+		traLog.add(Integer.toString(curVal));
+	}
+	
+	public void removeOpponentsPits(theGame temp, int turn)
+	{
+		int i, start, sum = 0;
+		start = (turn + eachCount + 1) % modVal;
+		for(i = start; i < (start + eachCount) % modVal; i++)
+		{
+			sum = sum + temp.theState.get(i);
+			temp.theState.set(i, 0);
+		}
+		
+		temp.theState.set((start + eachCount) % modVal, sum);
+	}
+	
+	public String posToString(int pos)
+	{
+		String temp = "";
+		int tempPos = pos; 
+				
+		if(tempPos > eachCount)
+		{
+			temp = temp + "A";
+			temp = temp + Integer.toString(modVal - tempPos); 
+		}
+		else
+		{
+			temp = temp + "B";
+			temp = temp + Integer.toString(tempPos + 2);
+		}
+		
+		return temp;
+	}
+	
+	public int maxMove(theGame temp, int dep,int turn)
+	{
+		int tempEval, maxVal = Integer.MIN_VALUE, valRet;
+		int pos = turn;
+		theGame temp1 = new theGame();
+		temp1.theState.addAll(temp.theState);
+		
+		if(dep >= theCut)
+		{
+			maxVal = evalState(temp);
+		}
+		else
+		{
+			if(endGame(temp,turn) == 1)
+			{
+				removeOpponentsPits(temp, turn);
+				finalGreed.theState.clear();
+				finalGreed.theState.addAll(temp.theState);
+				//maxEval = evalState(temp);
+			}
+			else
+			{
+				for(int i = 0;i < eachCount; i++)
+				{
+					traLog.add(posToString(pos));
+					traLog.add(Integer.toString(dep));
+					if(maxVal == Integer.MIN_VALUE)
+					{
+						traLog.add("-Infinity");
+					}
+					else
+					{
+						traLog.add(Integer.toString(maxVal));
+					}
+					
+					curDep = dep;
+					curVal = maxVal;
+					
+					tempEval = recGreed(temp,pos,turn);
+					valRet = minMove(temp,++dep,(turn + eachCount + 1) % modVal);
+					if(valRet >= maxVal)
+					{
+						maxVal = valRet;
+					}
+					pos++;
+					
+					temp.theState.clear();
+					temp.theState.addAll(temp1.theState);
+				}
+			}
+		}
+		return maxVal;
+	}
+	
+	public int minMove(theGame temp, int dep, int turn)
+	{
+		int tempEval,minVal = Integer.MAX_VALUE,valRet;
+		int pos = turn;
+		theGame temp1 = new theGame();
+		temp1.theState.addAll(temp.theState);
+		
+		if(dep >= theCut)
+		{
+			minVal = evalState(temp);
+		}
+		else
+		{
+			if(endGame(temp,turn) == 1)
+			{
+				removeOpponentsPits(temp, turn);
+				finalGreed.theState.clear();
+				finalGreed.theState.addAll(temp.theState);
+				//maxEval = evalState(temp);
+			}
+			else
+			{
+				for(int i = 0; i < eachCount; i++)
+				{
+					traLog.add(posToString(pos));
+					traLog.add(Integer.toString(dep));
+					if(minVal == Integer.MAX_VALUE)
+					{
+						traLog.add("Infinity");
+					}
+					else
+					{
+						traLog.add(Integer.toString(minVal));
+					}
+					
+					curDep = dep;
+					curVal = minVal;
+					
+					tempEval = recGreed(temp,pos,turn);
+					valRet = maxMove(temp,++dep,(turn + eachCount + 1) % modVal);
+					if(valRet <= minVal)
+					{
+						minVal = valRet;
+					}
+					pos++;
+					
+					temp.theState.clear();
+					temp.theState.addAll(temp1.theState);
+				}
+			}
+		}
+		return minVal;
+	}
+	
+	
+	public int theMinimax(theGame temp)
+	{
+		int turn = 0, ans;
+		
+		if(ourPlayer == 1)
+		{
+			turn = 0;
+		}
+		else if(ourPlayer == 2)
+		{
+			turn = eachCount + 1;
+		}
+		
+		ans = maxMove(temp,1,turn);
+		return ans;
+	}
+	
+	public int recGreed(theGame temp,int pos,int turn)
+	{
+		int j, j1, nof, maxEval = -999999999, cond2, flag = 0, toAdd = 0;
+		int directlyAcross = 0;
+		System.out.print("Initial: ");
+		display(temp);
+		nof = temp.theState.get(pos);
+		theGame ans = new theGame();
+
+		temp.theState.set(pos, 0);
+		
+		j1 = 1;
+		for(j = 1; j <= nof ; j++)
+		{
+			
+			if((pos + j1) % modVal == (turn + maxPos) % modVal)
+			{
+				j--;
+			}
+			else
+			{
+				if(temp.theState.get((pos + j1) % modVal) == 0 && j == nof)
+				{
+					if(((pos + j1) % modVal < (turn + eachCount)) && (pos + j1) % modVal >= turn)
+					{
+						flag = 1;
+						break;
+					}
+				}
+				
+				temp.theState.set((pos + j1) % modVal , temp.theState.get((pos + j1) % modVal) + 1);
+			}
+			j1++;
+		}
+		
+		if(flag == 1)
+		{
+			if(ourPlayer == 1)
+			{
+				directlyAcross = maxPos - ((pos+j1) % modVal) - 1;
+			}
+			else if(ourPlayer == 2)
+			{
+				directlyAcross = (maxPos-(pos + j1)) - 1;
+			}
+			toAdd = temp.theState.get(directlyAcross) + 1;
+			
+			temp.theState.set(turn + eachCount, temp.theState.get((turn + eachCount) % modVal) + toAdd);
+			temp.theState.set((pos + j1) % modVal, 0);
+			System.out.println("directlyAcross is : " + directlyAcross);
+			temp.theState.set(directlyAcross, 0);
+		}
+		
+		ans.theState.addAll(temp.theState);
+		//display(temp);
+		maxEval = evalState(temp);
+		
+		if((pos + nof) == (turn + eachCount))
+		{
+			System.out.println("Called");
+			cond2 = theGreed(temp);
+		
+			if(cond2 > maxEval)
+			{
+				
+				maxEval = cond2;
+			}
+		}
+		System.out.print("Eval : " + maxEval + " Every Move: ");
+		display(temp);
+		return maxEval;
+	}
+	
+	public int theGreed(theGame temp)
+	{
+		int turn = 0, pos1, tempEval, maxEval= -999999999, maxEvalPos = 0;
+		theGame temp1 = new theGame(); 
+		
+		if(ourPlayer == 1)
+		{
+			turn = 0;
+		}
+		else if(ourPlayer == 2)
+		{
+			turn = eachCount + 1;
+		}
+		
+		pos1 = turn;
+		temp1.theState.addAll(temp.theState);
+		//display(temp1);
+		
+		if(endGame(temp,turn) == 1)
+		{
+			removeOpponentsPits(temp, turn);
+			finalGreed.theState.clear();
+			finalGreed.theState.addAll(temp.theState);
+			maxEval = evalState(temp);
+		}
+		else
+		{	
+		
+			for(int i = 0; i < eachCount ; i++)
+			{
+				// adding to TraLog
+				//addToTraLog(pos1);
+				
+				tempEval = recGreed(temp,pos1,turn);
+			
+				//adding to TraLog
+				//addToTraLog(pos1);
+				
+				if(tempEval == maxEval)
+				{
+					if(comparePos(pos1,maxEvalPos) == 1)
+					{
+						finalGreed.theState.clear();
+						finalGreed.theState.addAll(temp.theState);
+						maxEval = tempEval;
+						maxEvalPos = pos1;
+					}
+				}
+				
+				else if(tempEval > maxEval)
+				{
+					finalGreed.theState.clear();
+					finalGreed.theState.addAll(temp.theState);
+					maxEval = tempEval;
+					maxEvalPos = pos1;
+				}
+				
+				temp.theState.clear();
+				temp.theState.addAll(temp1.theState);
+				pos1++;
+			}
+		}
+		
+		temp.theState.clear();
+		temp.theState.addAll(finalGreed.theState);
+		
+		return maxEval;
+	}
+	
+	public ArrayList<Integer> divideIt(String temp)
+	{
+		int t1;
+		ArrayList<Integer> list1 = new ArrayList<Integer>();
+		String temparr[];
+		
+		temparr = temp.split(" ");
+		eachCount = temparr.length;
+		
+		for(int i = 0; i<eachCount; i++)
+		{
+			t1 = Integer.parseInt(temparr[i]);
+			list1.add(i,t1);
+			//System.out.println(t1);
+		}
+		
+		return list1;
+		
+	}
+	
+	public void displayOutput(int type) throws FileNotFoundException
+	{
+		String temp = "";
+		int i;
+		PrintWriter out1 = new PrintWriter(new FileOutputStream("next_state.txt",true));
+		
+		if(type == 1 || type == 2 || type == 3)
+		{
+			for(i = (maxPos-1); i > eachCount; i--)
+			{
+				temp = temp + finalGreed.theState.get(i);
+				if(i != eachCount + 1)
+				{
+					temp = temp + " ";
+				}
+			}
+			out1.append(temp + "\n");
+			
+			temp = "";
+			for(i = 0;i< eachCount; i++)
+			{
+				temp = temp + finalGreed.theState.get(i);
+				if(i != (eachCount - 1))
+				{
+					temp = temp + " ";
+				}
+			}
+			out1.append(temp + "\n");
+			out1.append(Integer.toString(finalGreed.theState.get(maxPos)) + "\n");
+			out1.append(Integer.toString(finalGreed.theState.get(eachCount)));
+		}
+		
+		out1.close();
+		
+		PrintWriter out2 = new PrintWriter(new FileOutputStream("traverse_log.txt",true));
+		
+		if(type == 2)
+		{
+			
+			for(i = 0;i< traLog.size(); i++)
+			{
+				out2.append(traLog.get(i));
+				if((i+1) % 3 == 0)
+				{
+					out2.append(temp + "\n");
+					continue;
+				}
+				out2.append(temp + "\n");
+			}
+		}
+		
+		out2.close();
+	}
+	
+	
+	public void readInput(String theFile) throws NumberFormatException, FileNotFoundException
+	{
+		int type, ans = 0, m1, m2;
+		ArrayList<Integer> arr1 = new ArrayList<Integer>();
+		ArrayList<Integer> arr2 = new ArrayList<Integer>();
+		
+		File file1 = new File(theFile);
+		PrintWriter out12 = new PrintWriter("next_state.txt");
+		out12.close();
+		
+		PrintWriter out13 = new PrintWriter("traverse_log.txt");
+		out13.close();
+		
+		Scanner ob = new Scanner(file1);
+		//PrintWriter out1 = new PrintWriter(new FileOutputStream("next_state.txt",true));
+		
+		theGame board = new theGame();
+		traLog = new ArrayList<String>();
+		
+		type = Integer.parseInt(ob.nextLine());
+		ourPlayer = Integer.parseInt(ob.nextLine());
+		theCut = Integer.parseInt(ob.nextLine());
+		
+		//p2State = ob.nextLine();
+		arr1 = divideIt(ob.nextLine());
+		arr2 = divideIt(ob.nextLine());
+		m1 = Integer.parseInt(ob.nextLine());
+		arr1.add(m1);
+		m2 = Integer.parseInt(ob.nextLine());
+		arr2.add(m2);
+		
+		modVal = (eachCount*2) + 2;
+		maxPos = (eachCount*2) + 1;
+		
+		board.theState.addAll(arr2);
+		board.theState.addAll(arr1);
+		
+		
+		
+		if(type == 1)
+		{
+			try
+			{
+				ans = theGreed(board);
+				displayOutput(type);
+			}
+			catch(Exception e)
+			{
+				ans = 999;
+			}
+		}
+		
+		if(type == 2)
+		{
+			try
+			{
+				ans = theMinimax(board);
+				displayOutput(type);
+			}
+			catch(Exception e)
+			{
+				ans = 999;
+			}
+		}
+		
+		System.out.println("Answer : " + ans);
+		
+		ob.close();
+		
+	}
+	
+	
+	public static void main(String args[]) throws FileNotFoundException
+	{
+		mancala mancalaOb = new mancala();
+		mancalaOb.readInput(args[1]);
+	}
+}
+
+
